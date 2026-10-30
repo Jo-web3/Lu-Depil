@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Para "Adicionar à tela inicial" abrir como app -->
+  <meta name="theme-color" content="#FFF3F2">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Lu Depil">
+  <title>Lu Depil · Controle de Agendamentos e Financeiro</title>
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: '#FFF3F2', /* Snow */
+            foreground: '#3D1530',
+            card: '#FFFFFF',
+            primary: {
+              DEFAULT: '#FFCAE4', /* Pastel Petal */
+              foreground: '#5C1A43',
+            },
+            brand: '#8C2A62', /* texto e ícones em destaque */
+            secondary: {
+              DEFAULT: '#FBE9EE',
+              foreground: '#5C1A43',
+            },
+            muted: {
+              DEFAULT: '#FBEDEF',
+              foreground: '#8A5F76',
+            },
+            accent: {
+              DEFAULT: '#FFE3EF',
+              foreground: '#5C1A43',
+            },
+            destructive: {
+              DEFAULT: '#D6455D',
+              foreground: '#FFFFFF',
+            },
+            border: '#F5D7E3',
+          },
+          borderColor: {
+            DEFAULT: '#F5D7E3',
+          },
+          borderRadius: {
+            xl: '0.875rem',
+            '2xl': '1.375rem',
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons (versão fixa para uma atualização não quebrar o app) -->
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      touch-action: manipulation;
+    }
+    /* Custom scrollbar for chips */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-background pb-24 text-foreground">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4 pointer-events-none"></div>
+
+  <!-- Header Fixo -->
+  <header class="sticky top-0 z-20 border-b bg-card/95 backdrop-blur">
+    <div class="mx-auto flex max-w-2xl items-center justify-between gap-2 px-4 py-3">
+      <div>
+        <h1 id="header-title" class="text-lg font-bold">Hoje</h1>
+        <p class="text-xs text-muted-foreground">Lu · Studio de depilação</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- Botão de ação opcional no cabeçalho -->
+        <div id="header-action-container"></div>
+        <!-- Engrenagem / Ajustes -->
+        <button onclick="switchTab('servicos')" class="flex h-11 w-11 items-center justify-center rounded-xl border text-muted-foreground hover:bg-secondary transition-colors" title="Serviços, preços e backup" aria-label="Ajustes">
+          <i data-lucide="settings" class="h-5 w-5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="mx-auto max-w-2xl px-4 py-4 space-y-4" id="main-content">
+    <!-- Conteúdo injetado via JS -->
+  </main>
+
+  <!-- Navegação Inferior -->
+  <nav class="fixed inset-x-0 bottom-0 z-20 border-t bg-card">
+    <div class="mx-auto flex max-w-2xl">
+      <button onclick="switchTab('inicio')" id="nav-inicio" class="flex min-h-[60px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium text-brand transition-colors">
+        <i data-lucide="home" class="h-5 w-5"></i>
+        <span>Início</span>
+      </button>
+      <button onclick="switchTab('agenda')" id="nav-agenda" class="flex min-h-[60px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+        <i data-lucide="calendar" class="h-5 w-5"></i>
+        <span>Agenda</span>
+      </button>
+      <button onclick="switchTab('clientes')" id="nav-clientes" class="flex min-h-[60px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+        <i data-lucide="users" class="h-5 w-5"></i>
+        <span>Clientes</span>
+      </button>
+      <button onclick="switchTab('financeiro')" id="nav-financeiro" class="flex min-h-[60px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors">
+        <i data-lucide="bar-chart-3" class="h-5 w-5"></i>
+        <span>Financeiro</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Modais / Diálogos -->
+  <div id="modal-backdrop" class="fixed inset-0 z-50 bg-[rgba(61,21,48,0.5)] flex items-center justify-center p-4 hidden">
+    <div id="modal-box" class="max-w-sm w-full rounded-2xl border bg-card p-6 shadow-lg space-y-4 relative max-h-[90vh] overflow-y-auto">
+      <!-- Conteúdo do modal injetado aqui -->
+    </div>
+  </div>
+
+  <!-- Script daAplicação -->
+  <script>
+    // --- DATAS (sempre no fuso local do aparelho, formato YYYY-MM-DD) ---
+    const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const toISODate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const parseISODate = (iso) => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    };
+    const todayISO = () => toISODate(new Date());
+    const addDays = (iso, n) => {
+      const d = parseISODate(iso);
+      d.setDate(d.getDate() + n);
+      return toISODate(d);
+    };
+    const daysBetween = (fromIso, toIso) => Math.round((parseISODate(toIso) - parseISODate(fromIso)) / 86400000);
+    const mondayOf = (iso) => addDays(iso, -((parseISODate(iso).getDay() + 6) % 7));
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    const formatLongDate = (iso) => capitalize(parseISODate(iso).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }));
+    const formatMonthYear = (iso) => capitalize(parseISODate(iso).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }));
+    const formatShortDate = (iso) => iso.split('-').reverse().join('/');
+    const now = new Date();
+
+    // --- ESTADO DA APLICAÇÃO ---
+    const state = {
+      currentTab: 'inicio',
+      today: todayISO(),
+      selectedDate: todayISO(),
+      filterHoje: 'todos',
+      filterClientes: 'todas',
+      buscaClientes: '',
+      financeiroPeriodo: 'mes', // 'hoje' | 'semana' | 'mes' | 'personalizado'
+      dataDe: toISODate(new Date(now.getFullYear(), now.getMonth(), 1)),
+      dataAte: toISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+      selectedClientId: null,
+      activeModal: null, // 'novoAgendamento', 'pagamento', 'cancelamento', 'novoGasto', 'novoServico', 'vendaAvulsa', 'novaCliente'
+      modalData: null,
+
+      // Dados simulados
+      services: [
+        { id: 's1', name: 'Buço', duration: 10, price: 15 },
+        { id: 's2', name: 'Axila', duration: 15, price: 25 },
+        { id: 's3', name: 'Meia perna', duration: 30, price: 40 },
+        { id: 's4', name: 'Perna inteira', duration: 50, price: 70 },
+        { id: 's5', name: 'Virilha simples', duration: 20, price: 35 },
+        { id: 's6', name: 'Virilha completa', duration: 40, price: 60 },
+        { id: 's7', name: 'Sobrancelha na linha', duration: 20, price: 30 },
+        { id: 's8', name: 'Combo Perna + Virilha + Axila', duration: 90, price: 140 }
+      ],
+
+      clients: [],
+
+      appointments: [],
+
+      expenses: [],
+
+      sales: [] // vendas avulsas (sem horário)
+    };
+
+    // --- PERSISTÊNCIA (localStorage do navegador) ---
+    const STORAGE_KEY = 'ludepil:dados:v1';
+    const PERSISTED_KEYS = ['services', 'clients', 'appointments', 'expenses', 'sales'];
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        PERSISTED_KEYS.forEach(key => {
+          if (Array.isArray(saved[key])) state[key] = saved[key];
+        });
+      } catch (err) {
+        console.error('Falha ao carregar dados salvos:', err);
+      }
+    }
+
+    let lastSaved = null;
+    function saveData() {
+      const data = {};
+      PERSISTED_KEYS.forEach(key => { data[key] = state[key]; });
+      const json = JSON.stringify(data);
+      if (json === lastSaved) return;
+      try {
+        localStorage.setItem(STORAGE_KEY, json);
+        lastSaved = json;
+      } catch (err) {
+        console.error('Falha ao salvar dados:', err);
+        showToast('Não foi possível salvar os dados neste navegador.', 'error');
+      }
+    }
+
+    loadData();
+
+    // --- UTILITÁRIOS ---
+    const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+    // Todo texto digitado pela usuária passa por aqui antes de ir para o HTML
+    const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, ch => HTML_ESCAPES[ch]);
+
+    // Telefone é salvo só com DDD + número (10 ou 11 dígitos), sem o 55
+    const digitsOnly = (s) => String(s || '').replace(/\D/g, '');
+    function normalizePhone(raw) {
+      const d = digitsOnly(raw).replace(/^0+/, '');
+      return d.length > 11 && d.startsWith('55') ? d.slice(2) : d;
+    }
+    const isValidPhone = (d) => d.length === 10 || d.length === 11;
+    function formatPhone(phone) {
+      const d = normalizePhone(phone);
+      if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+      if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+      return phone;
+    }
+    function whatsappUrl(phone, text) {
+      const base = `https://wa.me/55${normalizePhone(phone)}`;
+      return text ? `${base}?text=${encodeURIComponent(text)}` : base;
+    }
+
+    const STATUS_LABELS = {
+      agendado: 'Agendado',
+      confirmado: 'Confirmado',
+      em_atendimento: 'Em atendimento',
+      concluido: 'Concluído',
+      faltou: 'Faltou',
+      cancelado: 'Cancelado'
+    };
+    const PAY_METHODS = ['Pix', 'Dinheiro', 'Cartão', 'Débito', 'Crédito'];
+
+    // Visitas e última visita são calculadas a partir dos atendimentos concluídos
+    const SUMIDA_DIAS = 30;
+    function getClientStats(clientId) {
+      const done = state.appointments.filter(a => a.clientId === clientId && a.status === 'concluido');
+      const lastDate = done.reduce((max, a) => (a.date > max ? a.date : max), '');
+      return { visits: done.length, lastDate };
+    }
+    function isSumida(clientId) {
+      const { lastDate } = getClientStats(clientId);
+      return lastDate !== '' && daysBetween(lastDate, state.today) > SUMIDA_DIAS;
+    }
+    function lastVisitLabel(lastDate) {
+      if (!lastDate) return 'Ainda não veio';
+      const days = daysBetween(lastDate, state.today);
+      if (days <= 0) return 'Veio hoje';
+      if (days === 1) return 'Veio ontem';
+      return `Veio há ${days} dias`;
+    }
+
+    // --- BACKUP ---
+    const BACKUP_KEY = 'ludepil:ultimoBackup';
+    const BACKUP_LEMBRETE_DIAS = 3;
+
+    function getLastBackup() {
+      try {
+        return localStorage.getItem(BACKUP_KEY) || '';
+      } catch (err) {
+        console.error('Falha ao ler data do último backup:', err);
+        return '';
+      }
+    }
+
+    function downloadFile(file) {
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function exportBackup() {
+      const data = { app: 'ludepil', version: 1, exportedAt: new Date().toISOString() };
+      PERSISTED_KEYS.forEach(key => { data[key] = state[key]; });
+      const file = new File([JSON.stringify(data, null, 2)], `ludepil-backup-${state.today}.json`, { type: 'application/json' });
+
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Backup Lu Depil' });
+        } else {
+          downloadFile(file);
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return; // ela fechou a tela de compartilhar
+        console.error('Falha ao compartilhar backup, baixando arquivo:', err);
+        downloadFile(file);
+      }
+
+      try {
+        localStorage.setItem(BACKUP_KEY, state.today);
+      } catch (err) {
+        console.error('Falha ao registrar data do backup:', err);
+      }
+      showToast('Backup salvo! Guarde o arquivo no Drive ou no seu WhatsApp.');
+      renderApp();
+    }
+
+    function importBackup(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        let data;
+        try {
+          data = JSON.parse(reader.result);
+        } catch (err) {
+          console.error('Backup inválido:', err);
+          showToast('Este arquivo não é um backup do app.', 'error');
+          return;
+        }
+        if (!data || data.app !== 'ludepil') {
+          showToast('Este arquivo não é um backup do app.', 'error');
+          return;
+        }
+        if (!confirm(`Restaurar o backup de ${formatShortDate((data.exportedAt || '').slice(0, 10) || state.today)}? Os dados atuais deste aparelho serão substituídos.`)) return;
+
+        PERSISTED_KEYS.forEach(key => {
+          if (Array.isArray(data[key])) state[key] = data[key];
+          else if (key !== 'services') state[key] = [];
+        });
+        showToast('Backup restaurado!');
+        renderApp();
+      };
+      reader.onerror = () => showToast('Não foi possível ler o arquivo.', 'error');
+      reader.readAsText(file);
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto flex items-center gap-2 rounded-2xl border p-4 shadow-lg text-sm font-semibold transition-all transform translate-y-2 opacity-0 ${
+        type === 'success' ? 'bg-green-50 border-green-200 text-green-900' : 'bg-red-50 border-red-200 text-red-900'
+      }`;
+      toast.innerHTML = `
+        <i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}" class="h-5 w-5 shrink-0 ${type === 'success' ? 'text-green-600' : 'text-red-600'}"></i>
+        <span class="flex-1">${escapeHtml(message)}</span>
+      `;
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // --- NAVEGAÇÃO ---
+    function switchTab(tab, clientId = null) {
+      state.currentTab = tab;
+      if (clientId) state.selectedClientId = clientId;
+
+      // Atualizar abas visuais
+      ['inicio', 'agenda', 'clientes', 'financeiro'].forEach(t => {
+        const btn = document.getElementById(`nav-${t}`);
+        if (btn) {
+          if (t === tab) {
+            btn.className = "flex min-h-[60px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium text-brand transition-colors";
+          } else {
+            btn.className = "flex min-h-[60px] flex-1 flex-col items-center justify-center gap-1 px-1 py-2 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors";
+          }
+        }
+      });
+
+      renderApp();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Atualiza "hoje" quando o dia vira com o app aberto. Retorna true se mudou.
+    function syncToday() {
+      const today = todayISO();
+      if (today === state.today) return false;
+      if (state.selectedDate === state.today) state.selectedDate = today;
+      state.today = today;
+      return true;
+    }
+
+    // --- RENDERIZADOR PRINCIPAL ---
+    function renderApp() {
+      syncToday();
+      saveData();
+      const main = document.getElementById('main-content');
+      const titleEl = document.getElementById('header-title');
+      const actionContainer = document.getElementById('header-action-container');
+
+      actionContainer.innerHTML = '';
+
+      if (state.currentTab === 'inicio') {
+        titleEl.textContent = 'Hoje';
+        main.innerHTML = renderInicio();
+      } else if (state.currentTab === 'agenda') {
+        titleEl.textContent = 'Agenda';
+        actionContainer.innerHTML = `
+          <button onclick="openNovoAgendamentoModal()" class="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold hover:bg-secondary transition-colors">
+            <i data-lucide="plus" class="h-4 w-4"></i> Novo
+          </button>
+        `;
+        main.innerHTML = renderAgenda();
+      } else if (state.currentTab === 'clientes') {
+        titleEl.textContent = 'Clientes';
+        actionContainer.innerHTML = `
+          <button onclick="openNovaClienteModal()" class="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm font-semibold hover:bg-secondary transition-colors">
+            <i data-lucide="user-plus" class="h-4 w-4"></i> Nova
+          </button>
+        `;
+        main.innerHTML = renderClientes();
+      } else if (state.currentTab === 'financeiro') {
+        titleEl.textContent = 'Financeiro';
+        main.innerHTML = renderFinanceiro();
+      } else if (state.currentTab === 'servicos') {
+        titleEl.textContent = 'Ajustes';
+        actionContainer.innerHTML = `
+          <button onclick="switchTab('inicio')" class="flex h-11 items-center gap-1 rounded-xl border px-3 text-sm font-semibold hover:bg-secondary transition-colors">
+            <i data-lucide="arrow-left" class="h-4 w-4"></i> Voltar
+          </button>
+        `;
+        main.innerHTML = renderServicos();
+      } else if (state.currentTab === 'ficha-cliente') {
+        titleEl.textContent = 'Ficha da Cliente';
+        actionContainer.innerHTML = `
+          <button onclick="switchTab('clientes')" class="flex h-11 items-center gap-1 rounded-xl border px-3 text-sm font-semibold hover:bg-secondary transition-colors">
+            <i data-lucide="arrow-left" class="h-4 w-4"></i> Voltar
+          </button>
+        `;
+        main.innerHTML = renderFichaCliente();
+      }
+
+      lucide.createIcons();
+    }
+
+    // --- TELA 1: INÍCIO ---
+    function renderInicio() {
+      const todayApps = state.appointments
+        .filter(a => a.date === state.today)
+        .sort((a, b) => a.time.localeCompare(b.time));
+      const totalHorarios = todayApps.length;
+      const atendidasCount = todayApps.filter(a => a.status === 'concluido').length;
+      const entrouTotal = todayApps
+        .filter(a => a.status === 'concluido')
+        .reduce((acc, curr) => acc + curr.total, 0)
+        + state.sales
+          .filter(s => s.date === state.today)
+          .reduce((acc, s) => acc + s.amount, 0);
+
+      // Filtrar lista de hoje
+      let filtered = todayApps;
+      if (state.filterHoje === 'a_confirmar') filtered = todayApps.filter(a => a.status === 'agendado');
+      else if (state.filterHoje === 'confirmados') filtered = todayApps.filter(a => a.status === 'confirmado' || a.status === 'em_atendimento');
+      else if (state.filterHoje === 'concluidos') filtered = todayApps.filter(a => a.status === 'concluido');
+      else if (state.filterHoje === 'faltas') filtered = todayApps.filter(a => a.status === 'faltou');
+
+      const sumidasCount = state.clients.filter(c => isSumida(c.id)).length;
+
+      const lastBackup = getLastBackup();
+      const hasData = state.clients.length > 0 || state.appointments.length > 0;
+      const needsBackup = hasData && (!lastBackup || daysBetween(lastBackup, state.today) >= BACKUP_LEMBRETE_DIAS);
+
+      return `
+        <!-- Cartão de resumo -->
+        <div class="rounded-2xl border bg-card p-4">
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-muted-foreground font-medium">${formatLongDate(state.today)}</span>
+            <span class="rounded-full bg-green-100 text-green-800 px-3 py-1 text-xs font-semibold">Agenda aberta</span>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-xl bg-secondary px-2 py-3">
+              <div class="text-xs text-muted-foreground">Horários</div>
+              <div class="truncate text-lg font-extrabold mt-0.5">${totalHorarios}</div>
+            </div>
+            <div class="rounded-xl bg-secondary px-2 py-3">
+              <div class="text-xs text-muted-foreground">Atendidas</div>
+              <div class="truncate text-lg font-extrabold mt-0.5">${atendidasCount}</div>
+            </div>
+            <div class="rounded-xl bg-secondary px-2 py-3">
+              <div class="text-xs text-muted-foreground">Entrou</div>
+              <div class="truncate text-lg font-extrabold mt-0.5 text-brand">${formatCurrency(entrouTotal)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lembrete de backup -->
+        ${needsBackup ? `
+        <div onclick="switchTab('servicos')" class="flex items-center justify-between gap-2 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-900 cursor-pointer hover:bg-amber-100 transition-colors">
+          <div class="flex items-center gap-3">
+            <i data-lucide="save" class="h-5 w-5 shrink-0"></i>
+            <span>${lastBackup ? `Último backup há ${daysBetween(lastBackup, state.today)} dias` : 'Você ainda não fez backup dos dados'}</span>
+          </div>
+          <span class="font-bold underline">Fazer</span>
+        </div>
+        ` : ''}
+
+        <!-- Destaque clicável se houver sumidas -->
+        ${sumidasCount > 0 ? `
+        <div onclick="state.filterClientes='sumidas'; switchTab('clientes');" class="flex items-center justify-between gap-2 rounded-2xl border border-primary bg-primary/10 p-4 text-sm font-semibold text-brand cursor-pointer hover:bg-primary/15 transition-colors">
+          <div class="flex items-center gap-3">
+            <i data-lucide="users" class="h-5 w-5 shrink-0"></i>
+            <span>${sumidasCount} clientes sumidas há mais de ${SUMIDA_DIAS} dias</span>
+          </div>
+          <span class="font-bold underline">Ver</span>
+        </div>
+        ` : ''}
+
+        <!-- Botões de ação grandes -->
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="openNovoAgendamentoModal()" class="min-h-[64px] rounded-2xl bg-primary px-3 text-base font-bold text-primary-foreground flex flex-col items-center justify-center gap-1 shadow-sm hover:opacity-95 transition-opacity">
+            <i data-lucide="plus" class="h-5 w-5"></i>
+            <span>Novo agendamento</span>
+          </button>
+          <button onclick="openVendaAvulsaModal()" class="min-h-[64px] rounded-2xl border-2 border-brand px-3 text-base font-bold text-brand flex flex-col items-center justify-center gap-1 hover:bg-primary/5 transition-colors">
+            <i data-lucide="shopping-bag" class="h-5 w-5"></i>
+            <span>Sem Horário</span>
+          </button>
+        </div>
+
+        <!-- Chips de filtro -->
+        <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
+          <button onclick="setFilterHoje('todos')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterHoje === 'todos' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Todos (${todayApps.length})</button>
+          <button onclick="setFilterHoje('a_confirmar')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterHoje === 'a_confirmar' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">A confirmar</button>
+          <button onclick="setFilterHoje('confirmados')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterHoje === 'confirmados' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Confirmados</button>
+          <button onclick="setFilterHoje('concluidos')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterHoje === 'concluidos' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Concluídos</button>
+          <button onclick="setFilterHoje('faltas')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterHoje === 'faltas' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Faltas</button>
+        </div>
+
+        <!-- Lista de atendimentos -->
+        <div class="space-y-3">
+          ${filtered.length === 0 ? `
+            <div class="rounded-2xl border border-dashed p-8 text-center">
+              <div class="text-4xl">📅</div>
+              <h3 class="mt-2 font-semibold">Nenhum horário encontrado</h3>
+              <p class="text-sm text-muted-foreground mt-1">Toque em “Novo agendamento” para começar o dia.</p>
+            </div>
+          ` : filtered.map(app => renderAppointmentCard(app)).join('')}
+        </div>
+      `;
+    }
+
+    function setFilterHoje(val) {
+      state.filterHoje = val;
+      renderApp();
+    }
+
+    // --- CARTÃO DE ATENDIMENTO ---
+    function renderAppointmentCard(app) {
+      const isUnconfirmed = app.status === 'agendado';
+      const isFinishedOrCancelled = app.status === 'concluido' || app.status === 'cancelado' || app.status === 'faltou';
+      const canMarkFalta = app.status === 'agendado' || app.status === 'confirmado';
+
+      let statusBadge = '';
+      if (app.status === 'agendado') statusBadge = '<span class="rounded-full bg-muted text-muted-foreground px-2 py-1 text-[11px] font-semibold">Agendado</span>';
+      else if (app.status === 'confirmado') statusBadge = '<span class="rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-[11px] font-semibold">Confirmado</span>';
+      else if (app.status === 'em_atendimento') statusBadge = '<span class="rounded-full bg-amber-100 text-amber-800 px-2 py-1 text-[11px] font-semibold">Em atendimento</span>';
+      else if (app.status === 'concluido') statusBadge = '<span class="rounded-full bg-green-100 text-green-800 px-2 py-1 text-[11px] font-semibold">Concluído</span>';
+      else if (app.status === 'faltou') statusBadge = '<span class="rounded-full bg-orange-100 text-orange-800 px-2 py-1 text-[11px] font-semibold">Faltou</span>';
+      else if (app.status === 'cancelado') statusBadge = '<span class="rounded-full bg-red-100 text-red-700 px-2 py-1 text-[11px] font-semibold">Cancelado</span>';
+
+      const totalDuration = app.services.reduce((acc, s) => acc + s.duration, 0);
+      const servicesStr = app.services.map(s => s.name).join(', ');
+      const clientObj = state.clients.find(c => c.id === app.clientId);
+      const phone = clientObj ? clientObj.phone : '';
+      const whenLabel = app.date === state.today ? 'hoje'
+        : app.date === addDays(state.today, 1) ? 'amanhã'
+        : `dia ${app.date.split('-').reverse().slice(0, 2).join('/')}`;
+
+      let finishedText = 'Cliente faltou';
+      if (app.status === 'concluido') {
+        finishedText = `Pago via ${escapeHtml(app.paymentMethod || 'Pix')}${app.discount > 0 ? ` · desconto de ${formatCurrency(app.discount)}` : ''}`;
+      } else if (app.status === 'cancelado') {
+        finishedText = app.cancelReason ? `Cancelado: ${escapeHtml(app.cancelReason)}` : 'Horário cancelado';
+      }
+
+      return `
+        <div class="rounded-2xl border bg-card p-3 shadow-sm ${isUnconfirmed ? 'border-dashed' : ''} ${isFinishedOrCancelled && app.status !== 'concluido' ? 'opacity-70' : ''}">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-brand font-bold">
+                ${escapeHtml(app.clientName.charAt(0))}
+              </div>
+              <div class="min-w-0">
+                <div class="truncate font-bold text-sm sm:text-base">${app.time} · ${escapeHtml(app.clientName)}</div>
+                <div class="text-xs text-muted-foreground">${totalDuration} min · ${formatCurrency(app.total)}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              ${statusBadge}
+              ${clientObj ? `
+                <button onclick="openClientDetail('${app.clientId}')" class="flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Ver ficha da cliente">
+                  <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="mt-2 truncate text-sm text-muted-foreground">
+            ${escapeHtml(servicesStr)}
+          </div>
+
+          ${!isFinishedOrCancelled ? `
+            <div class="mt-3 flex gap-2">
+              ${app.status === 'agendado' ? `
+                <a href="${whatsappUrl(phone, `Oi, ${app.clientName}! Confirmando seu horário ${whenLabel} às ${app.time} 😊`)}" target="_blank" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-muted-foreground hover:bg-secondary" aria-label="Confirmar pelo WhatsApp">
+                  <i data-lucide="message-circle" class="h-5 w-5"></i>
+                </a>
+                <button onclick="advanceStatus('${app.id}')" class="min-h-[44px] flex-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:opacity-95 transition-opacity">
+                  Confirmar
+                </button>
+              ` : ''}
+
+              ${app.status === 'confirmado' ? `
+                <button onclick="advanceStatus('${app.id}')" class="min-h-[44px] flex-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:opacity-95 transition-opacity">
+                  Começar atendimento
+                </button>
+              ` : ''}
+
+              ${app.status === 'em_atendimento' ? `
+                <button onclick="openPagamentoModal('${app.id}')" class="min-h-[44px] flex-1 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground hover:opacity-95 transition-opacity">
+                  Receber / Finalizar
+                </button>
+              ` : ''}
+            </div>
+            <div class="mt-2 grid ${canMarkFalta ? 'grid-cols-3' : 'grid-cols-2'} gap-2">
+              <button onclick="openEditarAgendamentoModal('${app.id}')" class="min-h-[40px] rounded-xl border text-sm font-semibold hover:bg-secondary transition-colors">
+                Editar
+              </button>
+              ${canMarkFalta ? `
+                <button onclick="markFaltou('${app.id}')" class="min-h-[40px] rounded-xl border text-sm font-semibold text-orange-700 hover:bg-orange-50 transition-colors">
+                  Faltou
+                </button>
+              ` : ''}
+              <button onclick="openCancelModal('${app.id}')" class="min-h-[40px] rounded-xl border text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          ` : `
+            <div class="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground border-t pt-2">
+              <span class="min-w-0 truncate">${finishedText}</span>
+              <button onclick="undoStatus('${app.id}')" class="min-h-[36px] shrink-0 rounded-lg px-2 font-semibold text-brand underline">
+                Desfazer
+              </button>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    // --- FLUXO DE STATUS E PAGAMENTO ---
+    function advanceStatus(appId) {
+      const app = state.appointments.find(a => a.id === appId);
+      if (!app) return;
+
+      if (app.status === 'agendado') {
+        app.status = 'confirmado';
+        showToast(`${app.clientName}: horário confirmado!`);
+      } else if (app.status === 'confirmado') {
+        app.status = 'em_atendimento';
+        showToast(`Atendimento de ${app.clientName} iniciado!`);
+      }
+      renderApp();
+    }
+
+    function markFaltou(appId) {
+      const app = state.appointments.find(a => a.id === appId);
+      if (!app) return;
+      app.status = 'faltou';
+      showToast(`Falta de ${app.clientName} registrada.`, 'error');
+      renderApp();
+    }
+
+    // Volta um atendimento finalizado para poder corrigir (pagamento, falta ou cancelamento)
+    function undoStatus(appId) {
+      const app = state.appointments.find(a => a.id === appId);
+      if (!app) return;
+
+      if (app.status === 'concluido') {
+        app.total = app.total + (app.discount || 0);
+        app.discount = 0;
+        app.paymentMethod = null;
+        app.status = 'em_atendimento';
+        showToast(`Pagamento de ${app.clientName} desfeito.`);
+      } else {
+        app.status = 'agendado';
+        app.cancelReason = '';
+        showToast(`Horário de ${app.clientName} reaberto.`);
+      }
+      renderApp();
+    }
+
+    function openCancelModal(appId) {
+      const app = state.appointments.find(a => a.id === appId);
+      state.activeModal = 'cancelamento';
+      state.modalData = { app };
+      renderModal();
+    }
+
+    function confirmCancel(appId, motivo) {
+      const app = state.appointments.find(a => a.id === appId);
+      if (app) {
+        app.status = 'cancelado';
+        app.cancelReason = motivo.trim();
+        showToast(`Horário de ${app.clientName} cancelado.`, 'error');
+      }
+      closeModal();
+      renderApp();
+    }
+
+    function deleteAppointment(appId) {
+      const app = state.appointments.find(a => a.id === appId);
+      if (!app) return;
+      if (!confirm(`Excluir o horário de ${app.clientName} (${formatShortDate(app.date)} às ${app.time})?`)) return;
+      state.appointments = state.appointments.filter(a => a.id !== appId);
+      showToast('Agendamento excluído.');
+      closeModal();
+      renderApp();
+    }
+
+    function openPagamentoModal(appId) {
+      const app = state.appointments.find(a => a.id === appId);
+      state.activeModal = 'pagamento';
+      state.modalData = { app, method: 'Pix', discount: 0, cashGiven: '' };
+      renderModal();
+    }
+
+    function finishPayment(appId, method, discount, cashGiven) {
+      const app = state.appointments.find(a => a.id === appId);
+      if (!app) return;
+
+      const appliedDiscount = Math.min(Math.max(0, discount || 0), app.total);
+      app.status = 'concluido';
+      app.paymentMethod = method;
+      app.discount = appliedDiscount;
+      app.total = app.total - appliedDiscount;
+
+      showToast(`${app.clientName}: ${formatCurrency(app.total)} recebido com sucesso!`);
+      closeModal();
+      renderApp();
+    }
+
+    // --- TELA 2: AGENDA ---
+    function renderAgenda() {
+      // Gerar dias da semana (segunda a domingo) baseados na selectedDate
+      const monday = mondayOf(state.selectedDate);
+      const days = Array.from({ length: 7 }, (_, i) => {
+        const date = addDays(monday, i);
+        const d = parseISODate(date);
+        return {
+          label: `${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()}`,
+          date,
+          count: state.appointments.filter(a => a.date === date).length
+        };
+      });
+      const isCurrentWeek = monday === mondayOf(state.today);
+
+      const dayApps = state.appointments.filter(a => a.date === state.selectedDate).sort((a,b) => a.time.localeCompare(b.time));
+
+      return `
+        <!-- Cabeçalho do Mês com navegação entre semanas -->
+        <div class="flex items-center justify-between gap-2 rounded-2xl border bg-card p-2">
+          <button onclick="shiftAgendaWeek(-1)" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary transition-colors" aria-label="Semana anterior">
+            <i data-lucide="chevron-left" class="h-5 w-5"></i>
+          </button>
+          <div class="text-center">
+            <div class="flex items-center justify-center gap-2 font-bold text-base">
+              <i data-lucide="calendar" class="h-5 w-5 text-brand"></i>
+              <span>${formatMonthYear(state.selectedDate)}</span>
+            </div>
+            <div class="text-xs text-muted-foreground font-medium">${dayApps.length} agendamentos no dia</div>
+          </div>
+          <button onclick="shiftAgendaWeek(1)" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-secondary transition-colors" aria-label="Próxima semana">
+            <i data-lucide="chevron-right" class="h-5 w-5"></i>
+          </button>
+        </div>
+
+        ${!isCurrentWeek ? `
+          <button onclick="selectAgendaDate(state.today)" class="min-h-[40px] w-full rounded-xl border bg-card text-sm font-semibold text-brand hover:bg-secondary transition-colors">
+            Voltar para hoje
+          </button>
+        ` : ''}
+
+        <!-- Chips de dias da semana -->
+        <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
+          ${days.map(d => `
+            <button onclick="selectAgendaDate('${d.date}')" class="flex flex-col items-center justify-center min-h-[56px] min-w-[72px] shrink-0 rounded-2xl border p-2 transition-colors ${state.selectedDate === d.date ? 'border-primary bg-primary text-primary-foreground font-bold' : 'bg-card text-foreground font-medium'}">
+              <span class="text-xs">${d.label.split(' ')[0]}</span>
+              <span class="text-base font-extrabold">${d.label.split(' ')[1]}</span>
+              <span class="text-[10px] opacity-80">${d.count} horários</span>
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- Lista do dia escolhido com buracos livres -->
+        <div class="space-y-3">
+          ${dayApps.length === 0 ? `
+            <div class="rounded-2xl border border-dashed p-8 text-center">
+              <div class="text-4xl">📭</div>
+              <h3 class="mt-2 font-semibold">Nenhum atendimento neste dia</h3>
+              <p class="text-sm text-muted-foreground mt-1">Toque no botão superior para agendar.</p>
+            </div>
+          ` : dayApps.map(app => renderAppointmentCard(app)).join('')}
+        </div>
+      `;
+    }
+
+    function selectAgendaDate(date) {
+      state.selectedDate = date;
+      renderApp();
+    }
+
+    function shiftAgendaWeek(weeks) {
+      state.selectedDate = addDays(state.selectedDate, 7 * weeks);
+      renderApp();
+    }
+
+    // --- TELA 3: CLIENTES ---
+    function getFilteredClients() {
+      let filtered = state.clients;
+      if (state.buscaClientes.trim() !== '') {
+        const q = state.buscaClientes.trim().toLowerCase();
+        const qDigits = digitsOnly(q);
+        filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || (qDigits !== '' && digitsOnly(c.phone).includes(qDigits)));
+      }
+
+      if (state.filterClientes === 'aniversariantes') {
+        const currentMonth = state.today.slice(5, 7);
+        return filtered
+          .filter(c => c.birthday && c.birthday.slice(5, 7) === currentMonth)
+          .sort((a, b) => a.birthday.slice(8).localeCompare(b.birthday.slice(8)));
+      }
+      if (state.filterClientes === 'sumidas') {
+        filtered = filtered.filter(c => isSumida(c.id));
+      }
+      return [...filtered].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    }
+
+    function renderClientList() {
+      const filtered = getFilteredClients();
+      if (filtered.length === 0) {
+        return `
+          <div class="rounded-2xl border border-dashed p-8 text-center">
+            <div class="text-4xl">🔍</div>
+            <h3 class="mt-2 font-semibold">Nenhuma cliente encontrada</h3>
+            <p class="text-sm text-muted-foreground mt-1">${state.clients.length === 0 ? 'Toque em “Nova” para cadastrar a primeira.' : 'Tente buscar por outro termo.'}</p>
+          </div>
+        `;
+      }
+      return filtered.map(c => {
+        const { visits, lastDate } = getClientStats(c.id);
+        const extra = state.filterClientes === 'aniversariantes' ? ` · 🎂 ${formatShortDate(c.birthday).slice(0, 5)}` : '';
+        return `
+          <div onclick="openClientDetail('${c.id}')" class="rounded-2xl border bg-card p-3 shadow-sm flex items-center justify-between gap-3 cursor-pointer hover:border-primary transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-brand font-bold">
+                ${escapeHtml(c.name.charAt(0))}
+              </div>
+              <div class="min-w-0">
+                <div class="truncate font-bold text-sm sm:text-base">${escapeHtml(c.name)}</div>
+                <div class="text-xs text-muted-foreground">${lastVisitLabel(lastDate)} · ${visits} ${visits === 1 ? 'visita' : 'visitas'}${extra}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <i data-lucide="chevron-right" class="h-4 w-4 text-muted-foreground"></i>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderClientes() {
+      return `
+        <!-- Input de busca -->
+        <div class="relative">
+          <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"></i>
+          <input type="search" value="${escapeHtml(state.buscaClientes)}" oninput="updateClientSearch(this.value)" placeholder="Buscar por nome ou telefone..." class="h-12 w-full rounded-xl border bg-card pl-11 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+        </div>
+
+        <!-- Chips de filtro de clientes -->
+        <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
+          <button onclick="setFilterClientes('todas')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterClientes === 'todas' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Todas (${state.clients.length})</button>
+          <button onclick="setFilterClientes('aniversariantes')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterClientes === 'aniversariantes' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Aniversariantes do mês 🎂</button>
+          <button onclick="setFilterClientes('sumidas')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterClientes === 'sumidas' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Sumidas (+${SUMIDA_DIAS} dias)</button>
+        </div>
+
+        <!-- Lista de Clientes (atualizada sozinha na busca, para o teclado não fechar) -->
+        <div id="client-list" class="space-y-3">
+          ${renderClientList()}
+        </div>
+      `;
+    }
+
+    function updateClientSearch(value) {
+      state.buscaClientes = value;
+      document.getElementById('client-list').innerHTML = renderClientList();
+      lucide.createIcons();
+    }
+
+    function setFilterClientes(val) {
+      state.filterClientes = val;
+      renderApp();
+    }
+
+    // --- FICHA DA CLIENTE ---
+    function openClientDetail(clientId) {
+      switchTab('ficha-cliente', clientId);
+    }
+
+    function renderFichaCliente() {
+      const c = state.clients.find(x => x.id === state.selectedClientId);
+      if (!c) return `<div class="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">Cliente não encontrada.</div>`;
+
+      const clientApps = state.appointments
+        .filter(a => a.clientId === c.id)
+        .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+      const { visits, lastDate } = getClientStats(c.id);
+      const notes = c.notes || [];
+      const serviceCounts = {};
+      clientApps.filter(a => a.status === 'concluido').forEach(a => a.services.forEach(s => {
+        serviceCounts[s.name] = (serviceCounts[s.name] || 0) + 1;
+      }));
+      const favoriteService = Object.keys(serviceCounts).sort((x, y) => serviceCounts[y] - serviceCounts[x])[0] || '—';
+
+      return `
+        <div class="rounded-2xl border bg-card p-4 space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-secondary text-brand text-2xl font-bold">
+                ${escapeHtml(c.name.charAt(0))}
+              </div>
+              <div class="min-w-0">
+                <h2 class="text-lg font-bold truncate">${escapeHtml(c.name)}</h2>
+                <p class="text-xs text-muted-foreground">${escapeHtml(formatPhone(c.phone))}</p>
+                <p class="text-xs text-muted-foreground">Aniversário: ${c.birthday ? formatShortDate(c.birthday) : 'não informado'}</p>
+              </div>
+            </div>
+            <a href="${whatsappUrl(c.phone)}" target="_blank" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-600 text-white shadow-sm hover:opacity-95" aria-label="Abrir WhatsApp">
+              <i data-lucide="message-circle" class="h-5 w-5"></i>
+            </a>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="openNovoAgendamentoModal('${c.id}')" class="min-h-[44px] rounded-xl bg-primary text-sm font-semibold text-primary-foreground flex items-center justify-center gap-2 hover:opacity-95">
+              <i data-lucide="calendar-plus" class="h-4 w-4"></i> Agendar
+            </button>
+            <button onclick="openEditarClienteModal('${c.id}')" class="min-h-[44px] rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 hover:bg-secondary">
+              <i data-lucide="pencil" class="h-4 w-4"></i> Editar dados
+            </button>
+          </div>
+
+          <!-- Avisos / Observações -->
+          ${notes.length > 0 ? `
+            <div class="rounded-2xl border border-dashed bg-amber-50 p-4 space-y-1">
+              <div class="text-xs font-bold text-amber-900 uppercase">Observações Importantes</div>
+              ${notes.map(n => `<div class="text-sm font-medium text-amber-900">• ${escapeHtml(n)}</div>`).join('')}
+            </div>
+          ` : ''}
+
+          <div class="grid grid-cols-2 gap-3 text-center">
+            <div class="rounded-xl bg-secondary p-3">
+              <div class="text-xs text-muted-foreground">Total de visitas</div>
+              <div class="text-xl font-extrabold mt-1">${visits}</div>
+              <div class="text-[11px] text-muted-foreground mt-0.5">${lastVisitLabel(lastDate)}</div>
+            </div>
+            <div class="rounded-xl bg-secondary p-3">
+              <div class="text-xs text-muted-foreground">Serviço preferido</div>
+              <div class="text-sm font-bold truncate mt-1">${escapeHtml(favoriteService)}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Histórico -->
+        <div class="space-y-2 rounded-2xl border bg-card p-4">
+          <h3 class="font-bold text-base mb-3">Histórico de Atendimentos</h3>
+          ${clientApps.length === 0 ? `
+            <div class="text-sm text-muted-foreground text-center py-4">Nenhum atendimento registrado.</div>
+          ` : clientApps.map(a => `
+            <div class="flex justify-between gap-3 border-b py-2 text-sm last:border-0">
+              <div class="min-w-0">
+                <div class="font-semibold">${formatShortDate(a.date)} · ${escapeHtml(a.services.map(s => s.name).join(', '))}</div>
+                <div class="text-xs text-muted-foreground">${STATUS_LABELS[a.status] || a.status}</div>
+              </div>
+              <div class="font-bold text-brand shrink-0">${formatCurrency(a.total)}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <button onclick="deleteClient('${c.id}')" class="min-h-[44px] w-full rounded-xl border bg-card text-sm font-semibold text-destructive hover:bg-destructive/5">
+          Excluir cliente
+        </button>
+      `;
+    }
+
+    function deleteClient(clientId) {
+      const c = state.clients.find(x => x.id === clientId);
+      if (!c) return;
+      if (!confirm(`Excluir ${c.name}? Os horários em aberto dela também serão apagados. Os atendimentos já pagos continuam no financeiro.`)) return;
+      state.clients = state.clients.filter(x => x.id !== clientId);
+      state.appointments = state.appointments.filter(a => a.clientId !== clientId || a.status === 'concluido');
+      showToast(`${c.name} foi excluída.`);
+      switchTab('clientes');
+    }
+
+    // --- TELA 4: FINANCEIRO ---
+    function periodRange(periodo) {
+      const today = state.today;
+      if (periodo === 'hoje') return { de: today, ate: today };
+      if (periodo === 'semana') {
+        const monday = mondayOf(today);
+        return { de: monday, ate: addDays(monday, 6) };
+      }
+      const d = parseISODate(today);
+      return {
+        de: toISODate(new Date(d.getFullYear(), d.getMonth(), 1)),
+        ate: toISODate(new Date(d.getFullYear(), d.getMonth() + 1, 0))
+      };
+    }
+
+    function getFinanceiroRange() {
+      return state.financeiroPeriodo === 'personalizado'
+        ? { de: state.dataDe, ate: state.dataAte }
+        : periodRange(state.financeiroPeriodo);
+    }
+
+    function setFinanceiroPeriodo(periodo) {
+      state.financeiroPeriodo = periodo;
+      renderApp();
+    }
+
+    function setFinanceiroData(campo, valor) {
+      if (!valor) return renderApp();
+      const range = getFinanceiroRange();
+      const next = { ...range, [campo]: valor };
+      state.dataDe = next.de <= next.ate ? next.de : next.ate;
+      state.dataAte = next.de <= next.ate ? next.ate : next.de;
+      state.financeiroPeriodo = 'personalizado';
+      renderApp();
+    }
+
+    function renderFinanceiro() {
+      const { de, ate } = getFinanceiroRange();
+      const inRange = (date) => date >= de && date <= ate;
+      const byDateDesc = (a, b) => b.date.localeCompare(a.date);
+
+      const paidApps = state.appointments.filter(a => a.status === 'concluido' && inRange(a.date));
+      const sales = state.sales.filter(s => inRange(s.date)).sort(byDateDesc);
+      const expenses = state.expenses.filter(e => inRange(e.date)).sort(byDateDesc);
+
+      const totalEntrada = paidApps.reduce((acc, a) => acc + a.total, 0)
+        + sales.reduce((acc, s) => acc + s.amount, 0);
+      const totalSaida = expenses.reduce((acc, e) => acc + e.amount, 0);
+      const totalSobrou = totalEntrada - totalSaida;
+
+      const byMethod = {};
+      [...paidApps.map(a => [a.paymentMethod, a.total]), ...sales.map(s => [s.paymentMethod, s.amount])].forEach(([method, amount]) => {
+        const m = method || 'Pix';
+        byMethod[m] = (byMethod[m] || 0) + amount;
+      });
+      const methodRows = Object.entries(byMethod).sort((x, y) => y[1] - x[1]);
+
+      const byService = {};
+      paidApps.forEach(a => a.services.forEach(s => {
+        const cur = byService[s.name] || { count: 0, amount: 0 };
+        byService[s.name] = { count: cur.count + 1, amount: cur.amount + s.price };
+      }));
+      const topServices = Object.entries(byService).sort((x, y) => y[1].count - x[1].count).slice(0, 3);
+      const maxServiceCount = topServices.length ? topServices[0][1].count : 0;
+
+      const emptyRow = (text) => `<div class="text-sm text-muted-foreground text-center py-4">${text}</div>`;
+      const chipClass = (periodo) => state.financeiroPeriodo === periodo ? 'border-primary bg-primary text-primary-foreground' : 'bg-card';
+      const deleteButton = (onclick, label) => `
+        <button onclick="${onclick}" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-destructive transition-colors" aria-label="${label}">
+          <i data-lucide="trash-2" class="h-4 w-4"></i>
+        </button>
+      `;
+
+      return `
+        <!-- Filtro de datas -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-medium text-muted-foreground">De</label>
+            <input type="date" value="${de}" onchange="setFinanceiroData('de', this.value)" class="h-12 w-full rounded-xl border bg-card px-3 text-sm font-semibold">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-muted-foreground">Até</label>
+            <input type="date" value="${ate}" onchange="setFinanceiroData('ate', this.value)" class="h-12 w-full rounded-xl border bg-card px-3 text-sm font-semibold">
+          </div>
+        </div>
+
+        <!-- Chips rápidos -->
+        <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
+          <button onclick="setFinanceiroPeriodo('hoje')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold ${chipClass('hoje')}">Hoje</button>
+          <button onclick="setFinanceiroPeriodo('semana')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold ${chipClass('semana')}">Esta semana</button>
+          <button onclick="setFinanceiroPeriodo('mes')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold ${chipClass('mes')}">Este mês</button>
+        </div>
+
+        <!-- Cartões de resumo financeiro -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="rounded-2xl border bg-primary p-4 text-primary-foreground">
+            <div class="text-xs opacity-90 font-medium">Entrou</div>
+            <div class="truncate text-xl font-extrabold mt-1">${formatCurrency(totalEntrada)}</div>
+          </div>
+          <div class="rounded-2xl border bg-card p-4">
+            <div class="text-xs text-muted-foreground font-medium">Saiu</div>
+            <div class="truncate text-xl font-extrabold mt-1 text-destructive">${formatCurrency(totalSaida)}</div>
+          </div>
+          <div class="col-span-2 rounded-2xl border bg-card p-4">
+            <div class="text-xs text-muted-foreground font-medium">Sobrou (Lucro)</div>
+            <div class="truncate text-xl font-extrabold mt-1 ${totalSobrou < 0 ? 'text-destructive' : 'text-green-700'}">${formatCurrency(totalSobrou)}</div>
+          </div>
+        </div>
+
+        <!-- Forma de pagamento -->
+        <div class="space-y-2 rounded-2xl border bg-card p-4">
+          <h3 class="font-bold text-base mb-2">Por forma de pagamento</h3>
+          ${methodRows.length === 0 ? emptyRow('Nenhum pagamento no período.') : methodRows.map(([m, val]) => `
+            <div class="flex justify-between border-b py-2 text-sm last:border-0"><span class="text-muted-foreground">${escapeHtml(m)} (${totalEntrada > 0 ? Math.round(val / totalEntrada * 100) : 0}%)</span><span class="font-semibold">${formatCurrency(val)}</span></div>
+          `).join('')}
+        </div>
+
+        <!-- Serviços mais feitos -->
+        <div class="space-y-3 rounded-2xl border bg-card p-4">
+          <h3 class="font-bold text-base">Serviços mais feitos</h3>
+          <!-- Gráfico de barras simples -->
+          <div class="space-y-2 pt-2">
+            ${topServices.length === 0 ? emptyRow('Nenhum serviço realizado no período.') : topServices.map(([name, s]) => `
+              <div>
+                <div class="flex justify-between text-xs font-semibold mb-1"><span>${escapeHtml(name)}</span><span>${s.count}× · ${formatCurrency(s.amount)}</span></div>
+                <div class="h-4 w-full bg-secondary rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full" style="width: ${Math.round(s.count / maxServiceCount * 100)}%;"></div></div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Vendas avulsas -->
+        <div class="space-y-3 rounded-2xl border bg-card p-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-base">Vendas sem horário</h3>
+            <button onclick="openVendaAvulsaModal()" class="min-h-[40px] rounded-xl border px-3 text-sm font-semibold hover:bg-secondary">
+              + Registrar venda
+            </button>
+          </div>
+          <div class="space-y-2">
+            ${sales.length === 0 ? emptyRow('Nenhuma venda avulsa no período.') : sales.map(s => `
+              <div class="flex items-center justify-between gap-2 border-b py-2 text-sm last:border-0">
+                <div class="min-w-0">
+                  <div class="font-semibold truncate">${escapeHtml(s.description)}</div>
+                  <div class="text-xs text-muted-foreground">${formatShortDate(s.date)} · ${escapeHtml(s.paymentMethod || 'Pix')}</div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <span class="font-bold text-brand">${formatCurrency(s.amount)}</span>
+                  ${deleteButton(`deleteSale('${s.id}')`, 'Excluir venda')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Seção de Gastos -->
+        <div class="space-y-3 rounded-2xl border bg-card p-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-base">Gastos do Período</h3>
+            <button onclick="openNovoGastoModal()" class="min-h-[40px] rounded-xl border px-3 text-sm font-semibold hover:bg-secondary">
+              + Registrar gasto
+            </button>
+          </div>
+          <div class="space-y-2">
+            ${expenses.length === 0 ? emptyRow('Nenhum gasto no período.') : expenses.map(e => `
+              <div class="flex items-center justify-between gap-2 border-b py-2 text-sm last:border-0">
+                <div class="min-w-0">
+                  <div class="font-semibold truncate">${escapeHtml(e.type)} · ${escapeHtml(e.description)}</div>
+                  <div class="text-xs text-muted-foreground">${formatShortDate(e.date)}</div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <span class="font-bold text-destructive">-${formatCurrency(e.amount)}</span>
+                  ${deleteButton(`deleteExpense('${e.id}')`, 'Excluir gasto')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function deleteExpense(expenseId) {
+      const e = state.expenses.find(x => x.id === expenseId);
+      if (!e || !confirm(`Excluir o gasto "${e.description}" de ${formatCurrency(e.amount)}?`)) return;
+      state.expenses = state.expenses.filter(x => x.id !== expenseId);
+      showToast('Gasto excluído.');
+      renderApp();
+    }
+
+    function deleteSale(saleId) {
+      const s = state.sales.find(x => x.id === saleId);
+      if (!s || !confirm(`Excluir a venda "${s.description}" de ${formatCurrency(s.amount)}?`)) return;
+      state.sales = state.sales.filter(x => x.id !== saleId);
+      showToast('Venda excluída.');
+      renderApp();
+    }
+
+    // --- TELA 5: AJUSTES (BACKUP + SERVIÇOS E PREÇOS) ---
+    function renderServicos() {
+      const lastBackup = getLastBackup();
+      return `
+        <!-- Backup -->
+        <div class="rounded-2xl border bg-card p-4 space-y-3">
+          <div>
+            <h2 class="font-bold text-base">Backup dos dados</h2>
+            <p class="text-xs text-muted-foreground mt-1">Os dados ficam guardados só neste celular. Salve um backup e guarde o arquivo no Drive ou mande para o seu WhatsApp.</p>
+            <p class="text-xs font-semibold mt-1 ${lastBackup ? 'text-green-700' : 'text-amber-700'}">${lastBackup ? `Último backup: ${formatShortDate(lastBackup)}` : 'Nenhum backup feito ainda.'}</p>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="exportBackup()" class="min-h-[48px] rounded-xl bg-primary text-sm font-semibold text-primary-foreground flex items-center justify-center gap-2 hover:opacity-95">
+              <i data-lucide="download" class="h-4 w-4"></i> Salvar backup
+            </button>
+            <label class="min-h-[48px] rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer hover:bg-secondary">
+              <i data-lucide="upload" class="h-4 w-4"></i> Restaurar
+              <input type="file" accept=".json,application/json" class="hidden" onchange="importBackup(this.files[0]); this.value = '';">
+            </label>
+          </div>
+        </div>
+
+        <!-- Serviços -->
+        <div class="space-y-3">
+          <h2 class="font-bold text-base pt-2">Serviços e preços</h2>
+          <button onclick="openNovoServicoModal()" class="min-h-[48px] w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-sm hover:opacity-95 flex items-center justify-center gap-2">
+            <i data-lucide="plus" class="h-5 w-5"></i> Novo serviço
+          </button>
+          <div class="space-y-3 pt-2">
+            ${state.services.map(s => `
+              <div onclick="openEditarServicoModal('${s.id}')" class="rounded-2xl border bg-card p-4 flex items-center justify-between gap-3 shadow-sm cursor-pointer hover:border-primary transition-colors">
+                <div class="min-w-0">
+                  <div class="font-bold text-base">${escapeHtml(s.name)}</div>
+                  <div class="text-xs text-muted-foreground mt-0.5">⏱️ ${s.duration} min</div>
+                </div>
+                <div class="flex items-center gap-3 shrink-0">
+                  <div class="text-base font-extrabold text-brand">${formatCurrency(s.price)}</div>
+                  <i data-lucide="pencil" class="h-4 w-4 text-muted-foreground"></i>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // --- MODAIS E DIÁLOGOS ---
+    function openModal() {
+      document.getElementById('modal-backdrop').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('modal-backdrop').classList.add('hidden');
+      state.activeModal = null;
+      state.modalData = null;
+    }
+
+    function renderPayMethodButtons() {
+      return `
+        <div class="grid grid-cols-3 gap-2">
+          ${PAY_METHODS.map(m => `
+            <button type="button" onclick="selectPayMethod('${m}')" id="pm-${m}" class="min-h-[48px] rounded-xl border text-sm font-semibold transition-colors ${state.modalData.method === m ? 'border-primary bg-primary/10 text-brand' : 'bg-card'}">${m}</button>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Serviços do catálogo + os que só existem no agendamento (ex.: serviço já excluído)
+    function getServiceOptions(app) {
+      const extras = app ? app.services.filter(s => !state.services.some(x => x.id === s.id)) : [];
+      return [...state.services, ...extras];
+    }
+
+    function renderModal() {
+      const box = document.getElementById('modal-box');
+      openModal();
+
+      if (state.activeModal === 'cancelamento') {
+        const app = state.modalData.app;
+        box.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Cancelar o horário da ${escapeHtml(app.clientName)}?</h3>
+            <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <p class="text-sm text-muted-foreground">Se precisar, dá para desfazer depois no próprio cartão.</p>
+          <div class="space-y-1.5">
+            <label class="text-sm font-medium">Motivo do cancelamento (opcional)</label>
+            <input type="text" id="cancel-motivo" placeholder="Ex: Cliente desmarcou por motivo de saúde" class="h-12 w-full rounded-xl border bg-card px-3 text-base focus:outline-none focus:ring-2">
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button onclick="closeModal()" class="min-h-[44px] flex-1 rounded-xl border font-semibold hover:bg-secondary">Voltar</button>
+            <button onclick="confirmCancel('${app.id}', document.getElementById('cancel-motivo').value)" class="min-h-[44px] flex-1 rounded-xl bg-destructive font-semibold text-white shadow-sm">Cancelar horário</button>
+          </div>
+        `;
+      } else if (state.activeModal === 'pagamento') {
+        const app = state.modalData.app;
+        box.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Receber · ${escapeHtml(app.clientName)}</h3>
+            <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+
+          <div class="space-y-3">
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Forma de pagamento</label>
+              ${renderPayMethodButtons()}
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Desconto (R$)</label>
+              <input type="number" inputmode="decimal" id="pay-discount" value="${state.modalData.discount}" oninput="updatePaymentTotal(${app.total})" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+            </div>
+
+            <div id="cash-change-container" class="${state.modalData.method === 'Dinheiro' ? '' : 'hidden'} space-y-1.5">
+              <label class="text-sm font-medium">Troco para (R$)</label>
+              <input type="number" inputmode="decimal" id="pay-cash" placeholder="Ex: 100" oninput="calcChange(${app.total})" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+              <div id="change-display" class="text-sm font-semibold text-green-700"></div>
+            </div>
+
+            <div class="rounded-xl bg-secondary p-3 text-center">
+              <div class="text-xs text-muted-foreground">Total a receber</div>
+              <div id="pay-total-display" class="text-2xl font-extrabold text-brand">${formatCurrency(app.total)}</div>
+            </div>
+
+            <button onclick="finishPayment('${app.id}', state.modalData.method, parseFloat(document.getElementById('pay-discount').value || 0), document.getElementById('pay-cash')?.value)" class="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-sm hover:opacity-95">
+              Confirmar pagamento
+            </button>
+          </div>
+        `;
+      } else if (state.activeModal === 'novoAgendamento') {
+        const editing = state.modalData && state.modalData.app;
+        const selectedClientId = editing ? editing.clientId : (state.modalData && state.modalData.clientId);
+        const selectedServiceIds = editing ? editing.services.map(s => s.id) : [];
+        const clientsByName = [...state.clients].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+        box.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">${editing ? 'Editar Agendamento' : 'Novo Agendamento'}</h3>
+            <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          ${state.clients.length === 0 ? `
+            <div class="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground space-y-3">
+              <p>Nenhuma cliente cadastrada ainda.</p>
+              <button onclick="openNovaClienteModal(true)" class="min-h-[44px] w-full rounded-xl bg-primary font-semibold text-primary-foreground">Cadastrar cliente</button>
+            </div>
+          ` : `
+          <div class="space-y-3">
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-medium">Cliente</label>
+                ${editing ? '' : `<button onclick="openNovaClienteModal(true)" class="text-xs font-semibold text-brand underline">+ Cliente nova</button>`}
+              </div>
+              <select id="na-client" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+                ${clientsByName.map(c => `<option value="${c.id}" ${c.id === selectedClientId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Serviços</label>
+              <div class="space-y-1 max-h-40 overflow-y-auto border rounded-xl p-2 bg-secondary/30">
+                ${getServiceOptions(editing).map(s => `
+                  <label class="flex items-center gap-2 text-sm font-medium py-1">
+                    <input type="checkbox" name="na-service" value="${s.id}" ${selectedServiceIds.includes(s.id) ? 'checked' : ''} class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-primary">
+                    <span class="flex-1">${escapeHtml(s.name)} (${s.duration} min)</span>
+                    <span class="font-bold">${formatCurrency(s.price)}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium">Data</label>
+                <input type="date" id="na-date" value="${editing ? editing.date : state.selectedDate}" class="h-12 w-full rounded-xl border bg-card px-3 text-sm">
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium">Horário</label>
+                <input type="time" id="na-time" value="${editing ? editing.time : '14:00'}" class="h-12 w-full rounded-xl border bg-card px-3 text-sm">
+              </div>
+            </div>
+            <button onclick="submitAgendamento()" class="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-sm hover:opacity-95">
+              ${editing ? 'Salvar alterações' : 'Agendar horário'}
+            </button>
+            ${editing ? `
+              <button onclick="deleteAppointment('${editing.id}')" class="min-h-[44px] w-full rounded-xl border font-semibold text-destructive hover:bg-destructive/5">
+                Excluir agendamento
+              </button>
+            ` : ''}
+          </div>
+          `}
+        `;
+      } else if (state.activeModal === 'vendaAvulsa') {
+        box.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Venda Avulsa (Sem Horário)</h3>
+            <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <div class="space-y-3">
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Descrição / Produto / Serviço</label>
+              <input type="text" id="va-desc" placeholder="Ex: Cera depilatória vendida" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Valor (R$)</label>
+              <input type="number" inputmode="decimal" id="va-val" placeholder="45.00" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Forma de pagamento</label>
+              ${renderPayMethodButtons()}
+            </div>
+            <button onclick="submitVendaAvulsa()" class="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-sm hover:opacity-95">
+              Registrar Venda
+            </button>
+          </div>
+        `;
+      } else if (state.activeModal === 'novoGasto') {
+        box.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">Registrar Gasto</h3>
+            <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <div class="space-y-3">
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Tipo</label>
+              <select id="ng-type" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+                <option value="Cera">Cera</option>
+                <option value="Descartáveis">Descartáveis</option>
+                <option value="Aluguel">Aluguel</option>
+                <option value="Luz/Água">Luz/Água</option>
+                <option value="Outros">Outros</option>
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Descrição</label>
+              <input type="text" id="ng-desc" placeholder="Ex: Compra de luvas" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium">Valor (R$)</label>
+                <input type="number" inputmode="decimal" id="ng-val" placeholder="50.00" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium">Data</label>
+                <input type="date" id="ng-date" value="${state.today}" class="h-12 w-full rounded-xl border bg-card px-3 text-sm">
+              </div>
+            </div>
+            <button onclick="submitNovoGasto()" class="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-sm hover:opacity-95">
+              Salvar Gasto
+            </button>
+          </div>
+        `;
+      } else if (state.activeModal === 'novoServico') {
+        const editing = state.modalData && state.modalData.service;
+        box.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">${editing ? 'Editar Serviço' : 'Novo Serviço'}</h3>
+            <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <div class="space-y-3">
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Nome do serviço</label>
+              <input type="text" id="ns-name" value="${editing ? escapeHtml(editing.name) : ''}" placeholder="Ex: Buço" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium">Duração (min)</label>
+                <input type="number" inputmode="numeric" id="ns-dur" value="${editing ? editing.duration : ''}" placeholder="15" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+              </div>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium">Preço (R$)</label>
+                <input type="number" inputmode="decimal" id="ns-price" value="${editing ? editing.price : ''}" placeholder="25" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+              </div>
+            </div>
+            ${editing ? `<p class="text-xs text-muted-foreground">Mudar o preço não altera atendimentos já agendados.</p>` : ''}
+            <button onclick="submitServico()" class="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-sm hover:opacity-95">
+              ${editing ? 'Salvar alterações' : 'Adicionar Serviço'}
+            </button>
+            ${editing ? `
+              <button onclick="deleteServico('${editing.id}')" class="min-h-[44px] w-full rounded-xl border font-semibold text-destructive hover:bg-destructive/5">
+                Excluir serviço
+              </button>
+            ` : ''}
+          </div>
+        `;
+      } else if (state.activeModal === 'novaCliente') {
+        const editing = state.modalData && state.modalData.client;
+        box.innerHTML = `
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">${editing ? 'Editar Cliente' : 'Cadastrar Nova Cliente'}</h3>
+            <button onclick="closeModal()" class="text-muted-foreground hover:text-foreground" aria-label="Fechar"><i data-lucide="x" class="h-5 w-5"></i></button>
+          </div>
+          <div class="space-y-3">
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Nome completo</label>
+              <input type="text" id="nc-name" value="${editing ? escapeHtml(editing.name) : ''}" placeholder="Ex: Camila Rocha" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Telefone / WhatsApp</label>
+              <input type="tel" id="nc-phone" value="${editing ? escapeHtml(formatPhone(editing.phone)) : ''}" placeholder="(11) 98888-7777" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Data de Nascimento (opcional)</label>
+              <input type="date" id="nc-bday" value="${editing && editing.birthday ? editing.birthday : ''}" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
+            </div>
+            <div class="space-y-1.5">
+              <label class="text-sm font-medium">Observações (uma por linha)</label>
+              <textarea id="nc-notes" rows="3" placeholder="Ex: Pele sensível na virilha" class="w-full rounded-xl border bg-card px-3 py-2 text-base">${editing ? escapeHtml((editing.notes || []).join('\n')) : ''}</textarea>
+            </div>
+            <button onclick="submitCliente()" class="h-12 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-sm hover:opacity-95">
+              ${editing ? 'Salvar alterações' : 'Cadastrar Cliente'}
+            </button>
+          </div>
+        `;
+      }
+
+      lucide.createIcons();
+    }
+
+    function selectPayMethod(method) {
+      state.modalData.method = method;
+      document.querySelectorAll('[id^="pm-"]').forEach(el => {
+        el.className = "min-h-[48px] rounded-xl border text-sm font-semibold bg-card";
+      });
+      const selectedEl = document.getElementById(`pm-${method}`);
+      if (selectedEl) selectedEl.className = "min-h-[48px] rounded-xl border text-sm font-semibold border-primary bg-primary/10 text-brand";
+
+      const cashContainer = document.getElementById('cash-change-container');
+      if (cashContainer) {
+        if (method === 'Dinheiro') cashContainer.classList.remove('hidden');
+        else cashContainer.classList.add('hidden');
+      }
+    }
+
+    function updatePaymentTotal(originalTotal) {
+      const discount = parseFloat(document.getElementById('pay-discount').value || 0);
+      const finalTotal = Math.max(0, originalTotal - discount);
+      document.getElementById('pay-total-display').textContent = formatCurrency(finalTotal);
+    }
+
+    function calcChange(originalTotal) {
+      const discount = parseFloat(document.getElementById('pay-discount').value || 0);
+      const finalTotal = Math.max(0, originalTotal - discount);
+      const cashGiven = parseFloat(document.getElementById('pay-cash').value || 0);
+      const change = cashGiven - finalTotal;
+      const display = document.getElementById('change-display');
+      if (change >= 0) {
+        display.textContent = `Troco: ${formatCurrency(change)}`;
+      } else {
+        display.textContent = `Falta: ${formatCurrency(Math.abs(change))}`;
+      }
+    }
+
+    // Ações para abrir modais
+    function openNovoAgendamentoModal(clientId = null) {
+      state.activeModal = 'novoAgendamento';
+      state.modalData = clientId ? { clientId } : null;
+      renderModal();
+    }
+    function openEditarAgendamentoModal(appId) {
+      const app = state.appointments.find(a => a.id === appId);
+      if (!app) return;
+      state.activeModal = 'novoAgendamento';
+      state.modalData = { app };
+      renderModal();
+    }
+    function openVendaAvulsaModal() {
+      state.activeModal = 'vendaAvulsa';
+      state.modalData = { method: 'Pix' };
+      renderModal();
+    }
+    function openNovoGastoModal() {
+      state.activeModal = 'novoGasto';
+      state.modalData = null;
+      renderModal();
+    }
+    function openNovoServicoModal() {
+      state.activeModal = 'novoServico';
+      state.modalData = null;
+      renderModal();
+    }
+    function openEditarServicoModal(serviceId) {
+      const service = state.services.find(s => s.id === serviceId);
+      if (!service) return;
+      state.activeModal = 'novoServico';
+      state.modalData = { service };
+      renderModal();
+    }
+    // fromAgendamento: depois de cadastrar, volta para o agendamento já com a cliente escolhida
+    function openNovaClienteModal(fromAgendamento = false) {
+      state.activeModal = 'novaCliente';
+      state.modalData = { fromAgendamento };
+      renderModal();
+    }
+    function openEditarClienteModal(clientId) {
+      const client = state.clients.find(c => c.id === clientId);
+      if (!client) return;
+      state.activeModal = 'novaCliente';
+      state.modalData = { client };
+      renderModal();
+    }
+
+    // Submits dos modais
+    function submitAgendamento() {
+      const editing = state.modalData && state.modalData.app;
+      const clientId = document.getElementById('na-client').value;
+      const client = state.clients.find(c => c.id === clientId);
+      if (!client) {
+        showToast('Cadastre uma cliente antes de agendar.', 'error');
+        return;
+      }
+
+      const checkedIds = Array.from(document.querySelectorAll('input[name="na-service"]:checked')).map(cb => cb.value);
+      if (checkedIds.length === 0) {
+        showToast('Selecione pelo menos um serviço.', 'error');
+        return;
+      }
+
+      const date = document.getElementById('na-date').value;
+      const time = document.getElementById('na-time').value;
+      if (!date || !time) {
+        showToast('Informe a data e o horário.', 'error');
+        return;
+      }
+
+      const services = getServiceOptions(editing)
+        .filter(s => checkedIds.includes(s.id))
+        .map(s => ({ ...s }));
+      const fields = {
+        clientId: client.id,
+        clientName: client.name,
+        date,
+        time,
+        services,
+        total: services.reduce((acc, s) => acc + s.price, 0)
+      };
+
+      if (editing) {
+        state.appointments = state.appointments.map(a => (a.id === editing.id ? { ...a, ...fields } : a));
+        showToast(`Agendamento de ${client.name} atualizado!`);
+      } else {
+        state.appointments = [...state.appointments, {
+          id: 'a_' + Date.now(),
+          ...fields,
+          status: 'agendado',
+          paymentMethod: null,
+          discount: 0
+        }];
+        showToast(`Agendamento para ${client.name} criado com sucesso!`);
+      }
+
+      state.selectedDate = date;
+      closeModal();
+      renderApp();
+    }
+
+    function submitVendaAvulsa() {
+      const description = document.getElementById('va-desc').value.trim();
+      const amount = parseFloat(document.getElementById('va-val').value || 0);
+      if (!description || !(amount > 0)) {
+        showToast('Preencha a descrição e o valor corretamente.', 'error');
+        return;
+      }
+
+      state.sales = [...state.sales, {
+        id: 'v_' + Date.now(),
+        date: todayISO(),
+        description,
+        amount,
+        paymentMethod: state.modalData.method
+      }];
+
+      showToast(`Venda avulsa de ${formatCurrency(amount)} registrada!`);
+      closeModal();
+      renderApp();
+    }
+
+    function submitNovoGasto() {
+      const type = document.getElementById('ng-type').value;
+      const description = document.getElementById('ng-desc').value.trim();
+      const amount = parseFloat(document.getElementById('ng-val').value || 0);
+      const date = document.getElementById('ng-date').value || todayISO();
+
+      if (!description || !(amount > 0)) {
+        showToast('Preencha todos os campos do gasto.', 'error');
+        return;
+      }
+
+      state.expenses = [{
+        id: 'e_' + Date.now(),
+        date,
+        amount,
+        type,
+        description
+      }, ...state.expenses];
+
+      showToast(`Gasto de ${formatCurrency(amount)} registrado!`);
+      closeModal();
+      renderApp();
+    }
+
+    function submitServico() {
+      const editing = state.modalData && state.modalData.service;
+      const name = document.getElementById('ns-name').value.trim();
+      const duration = parseInt(document.getElementById('ns-dur').value || 0);
+      const price = parseFloat(document.getElementById('ns-price').value || 0);
+
+      if (!name || !(duration > 0) || !(price > 0)) {
+        showToast('Preencha todos os campos do serviço.', 'error');
+        return;
+      }
+
+      if (editing) {
+        state.services = state.services.map(s => (s.id === editing.id ? { ...s, name, duration, price } : s));
+        showToast(`Serviço "${name}" atualizado!`);
+      } else {
+        state.services = [...state.services, { id: 's_' + Date.now(), name, duration, price }];
+        showToast(`Serviço "${name}" cadastrado com sucesso!`);
+      }
+      closeModal();
+      renderApp();
+    }
+
+    function deleteServico(serviceId) {
+      const service = state.services.find(s => s.id === serviceId);
+      if (!service || !confirm(`Excluir o serviço "${service.name}"? Os atendimentos já feitos não mudam.`)) return;
+      state.services = state.services.filter(s => s.id !== serviceId);
+      showToast('Serviço excluído.');
+      closeModal();
+      renderApp();
+    }
+
+    function submitCliente() {
+      const editing = state.modalData && state.modalData.client;
+      const fromAgendamento = state.modalData && state.modalData.fromAgendamento;
+      const name = document.getElementById('nc-name').value.trim();
+      const phone = normalizePhone(document.getElementById('nc-phone').value);
+      const birthday = document.getElementById('nc-bday').value;
+      const notes = document.getElementById('nc-notes').value
+        .split('\n')
+        .map(n => n.trim())
+        .filter(Boolean);
+
+      if (!name) {
+        showToast('Preencha o nome da cliente.', 'error');
+        return;
+      }
+      if (!isValidPhone(phone)) {
+        showToast('Telefone inválido. Use DDD + número, ex: (11) 98888-7777.', 'error');
+        return;
+      }
+
+      if (editing) {
+        state.clients = state.clients.map(c => (c.id === editing.id ? { ...c, name, phone, birthday, notes } : c));
+        state.appointments = state.appointments.map(a => (a.clientId === editing.id ? { ...a, clientName: name } : a));
+        showToast(`Dados de ${name} atualizados!`);
+        closeModal();
+        renderApp();
+        return;
+      }
+
+      const newClient = { id: 'c_' + Date.now(), name, phone, birthday, notes };
+      state.clients = [...state.clients, newClient];
+      showToast(`Cliente ${name} cadastrada com sucesso!`);
+      closeModal();
+      renderApp();
+      if (fromAgendamento) openNovoAgendamentoModal(newClient.id);
+    }
+
+    // Fechar modal ao clicar fora
+    document.getElementById('modal-backdrop').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-backdrop') closeModal();
+    });
+
+    // Ao voltar para o app (ex.: no dia seguinte), atualiza a data de hoje
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && syncToday()) renderApp();
+    });
+
+    // Pede ao navegador para não apagar os dados sozinho quando faltar espaço
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(err => console.error('Falha ao pedir armazenamento persistente:', err));
+    }
+
+    // Inicialização
+    renderApp();
+  </script>
+</body>
+</html>
