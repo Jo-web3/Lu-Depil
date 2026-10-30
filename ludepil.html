@@ -858,12 +858,6 @@
         filtered = filtered.filter(c => c.name.toLowerCase().includes(q) || (qDigits !== '' && digitsOnly(c.phone).includes(qDigits)));
       }
 
-      if (state.filterClientes === 'aniversariantes') {
-        const currentMonth = state.today.slice(5, 7);
-        return filtered
-          .filter(c => c.birthday && c.birthday.slice(5, 7) === currentMonth)
-          .sort((a, b) => a.birthday.slice(8).localeCompare(b.birthday.slice(8)));
-      }
       if (state.filterClientes === 'sumidas') {
         filtered = filtered.filter(c => isSumida(c.id));
       }
@@ -883,7 +877,6 @@
       }
       return filtered.map(c => {
         const { visits, lastDate } = getClientStats(c.id);
-        const extra = state.filterClientes === 'aniversariantes' ? ` · 🎂 ${formatShortDate(c.birthday).slice(0, 5)}` : '';
         return `
           <div onclick="openClientDetail('${c.id}')" class="rounded-2xl border bg-card p-3 shadow-sm flex items-center justify-between gap-3 cursor-pointer hover:border-primary transition-colors">
             <div class="flex items-center gap-3 min-w-0">
@@ -892,7 +885,7 @@
               </div>
               <div class="min-w-0">
                 <div class="truncate font-bold text-sm sm:text-base">${escapeHtml(c.name)}</div>
-                <div class="text-xs text-muted-foreground">${lastVisitLabel(lastDate)} · ${visits} ${visits === 1 ? 'visita' : 'visitas'}${extra}</div>
+                <div class="text-xs text-muted-foreground">${lastVisitLabel(lastDate)} · ${visits} ${visits === 1 ? 'visita' : 'visitas'}</div>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -914,7 +907,6 @@
         <!-- Chips de filtro de clientes -->
         <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 no-scrollbar">
           <button onclick="setFilterClientes('todas')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterClientes === 'todas' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Todas (${state.clients.length})</button>
-          <button onclick="setFilterClientes('aniversariantes')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterClientes === 'aniversariantes' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Aniversariantes do mês 🎂</button>
           <button onclick="setFilterClientes('sumidas')" class="min-h-[40px] shrink-0 rounded-full border px-4 text-sm font-semibold transition-colors ${state.filterClientes === 'sumidas' ? 'border-primary bg-primary text-primary-foreground' : 'bg-card text-foreground'}">Sumidas (+${SUMIDA_DIAS} dias)</button>
         </div>
 
@@ -966,7 +958,6 @@
               <div class="min-w-0">
                 <h2 class="text-lg font-bold truncate">${escapeHtml(c.name)}</h2>
                 <p class="text-xs text-muted-foreground">${escapeHtml(formatPhone(c.phone))}</p>
-                <p class="text-xs text-muted-foreground">Aniversário: ${c.birthday ? formatShortDate(c.birthday) : 'não informado'}</p>
               </div>
             </div>
             <a href="${whatsappUrl(c.phone)}" target="_blank" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-600 text-white shadow-sm hover:opacity-95" aria-label="Abrir WhatsApp">
@@ -1531,10 +1522,6 @@
               <input type="tel" id="nc-phone" value="${editing ? escapeHtml(formatPhone(editing.phone)) : ''}" placeholder="(11) 98888-7777" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
             </div>
             <div class="space-y-1.5">
-              <label class="text-sm font-medium">Data de Nascimento (opcional)</label>
-              <input type="date" id="nc-bday" value="${editing && editing.birthday ? editing.birthday : ''}" class="h-12 w-full rounded-xl border bg-card px-3 text-base">
-            </div>
-            <div class="space-y-1.5">
               <label class="text-sm font-medium">Observações (uma por linha)</label>
               <textarea id="nc-notes" rows="3" placeholder="Ex: Pele sensível na virilha" class="w-full rounded-xl border bg-card px-3 py-2 text-base">${editing ? escapeHtml((editing.notes || []).join('\n')) : ''}</textarea>
             </div>
@@ -1766,7 +1753,6 @@
       const fromAgendamento = state.modalData && state.modalData.fromAgendamento;
       const name = document.getElementById('nc-name').value.trim();
       const phone = normalizePhone(document.getElementById('nc-phone').value);
-      const birthday = document.getElementById('nc-bday').value;
       const notes = document.getElementById('nc-notes').value
         .split('\n')
         .map(n => n.trim())
@@ -1782,7 +1768,7 @@
       }
 
       if (editing) {
-        state.clients = state.clients.map(c => (c.id === editing.id ? { ...c, name, phone, birthday, notes } : c));
+        state.clients = state.clients.map(c => (c.id === editing.id ? { ...c, name, phone, notes } : c));
         state.appointments = state.appointments.map(a => (a.clientId === editing.id ? { ...a, clientName: name } : a));
         showToast(`Dados de ${name} atualizados!`);
         closeModal();
@@ -1790,7 +1776,7 @@
         return;
       }
 
-      const newClient = { id: 'c_' + Date.now(), name, phone, birthday, notes };
+      const newClient = { id: 'c_' + Date.now(), name, phone, notes };
       state.clients = [...state.clients, newClient];
       showToast(`Cliente ${name} cadastrada com sucesso!`);
       closeModal();
