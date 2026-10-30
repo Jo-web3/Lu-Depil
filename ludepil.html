@@ -8,6 +8,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Lu Depil">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <title>Lu Depil · Controle de Agendamentos e Financeiro</title>
   <!-- Google Fonts: Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1808,6 +1811,11 @@
     // Pede ao navegador para não apagar os dados sozinho quando faltar espaço
     if (navigator.storage && navigator.storage.persist) {
       navigator.storage.persist().catch(err => console.error('Falha ao pedir armazenamento persistente:', err));
+    }
+
+    // Permite instalar o app pelo Chrome e abrir sem internet
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.error('Falha ao registrar o service worker:', err));
     }
 
     // Inicialização
